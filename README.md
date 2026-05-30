@@ -95,9 +95,16 @@ npm start
 npm run dev
 ```
 
-The backend starts on **http://localhost:3001**.
+The backend starts on **http://localhost:3001** by default. To use a different backend port, set `PORT` in `backend/.env`.
 
 On first startup with an empty MongoDB, the price will default to `CDA_BASE_PRICE` (1000 KRW) from `.env`.
+
+If port `3001` is already in use on Windows, find and stop the process:
+
+```bat
+netstat -ano | findstr :3001
+taskkill /PID PID번호 /F
+```
 
 ---
 

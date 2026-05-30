@@ -1,7 +1,45 @@
+import { useEffect, useState } from "react";
 import { useMarket } from "../contexts/MarketContext";
 
+function getKoreanToday() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function formatDateTime(dateValue) {
+  if (!dateValue) return "";
+  return new Date(dateValue).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
+}
+
 export default function NewsFeed() {
-  const { news, currentPrice, priceUpdatedAt } = useMarket();
+  const {
+    news,
+    newsLoading,
+    newsError,
+    currentPrice,
+    priceUpdatedAt,
+    fetchNews,
+  } = useMarket();
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedArticle, setSelectedArticle] = useState(null);
+
+  useEffect(() => {
+    fetchNews(selectedDate);
+  }, [selectedDate]);
+
+  const handleToday = () => {
+    setSelectedDate(getKoreanToday());
+  };
+
+  const handleShowLatest = () => {
+    setSelectedDate("");
+  };
 
   return (
     <div className="news-panel">
@@ -21,24 +59,105 @@ export default function NewsFeed() {
         </div>
       </div>
 
-      <div className="news-list">
-        {news.length === 0 && <p className="empty">뉴스를 불러오는 중...</p>}
+      <div className="news-toolbar">
+        <button type="button" className="today-btn" onClick={handleToday}>
+          오늘
+        </button>
+        <input
+          type="date"
+          className="news-date-picker"
+          value={selectedDate}
+          onChange={(event) => setSelectedDate(event.target.value)}
+          aria-label="조회할 뉴스 날짜"
+        />
+        <button type="button" className="btn-outline news-reset-btn" onClick={handleShowLatest}>
+          최신 보기
+        </button>
+      </div>
+
+      <div className="news-grid">
+        {newsLoading && <p className="empty">보안뉴스를 불러오는 중입니다...</p>}
+        {!newsLoading && newsError && <p className="empty error">{newsError}</p>}
+        {!newsLoading && !newsError && news.length === 0 && (
+          <p className="empty">
+            {selectedDate ? "선택한 날짜의 보안뉴스 기사가 없습니다." : "보안뉴스 기사가 없습니다."}
+          </p>
+        )}
         {news.map((article, i) => (
-          <a
-            key={i}
-            href={article.link}
-            target="_blank"
-            rel="noopener noreferrer"
+          <article
+            key={`${article.link}-${i}`}
             className="news-item"
+            onClick={() => setSelectedArticle(article)}
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setSelectedArticle(article);
+              }
+            }}
           >
             <div className="news-source">{article.source}</div>
             <div className="news-title">{article.title}</div>
-            <div className="news-date">
-              {article.pubDate ? new Date(article.pubDate).toLocaleString("ko-KR") : ""}
+            <div className="news-date">{formatDateTime(article.pubDate)}</div>
+            <p className="news-summary">
+              {article.summary || "요약 정보가 제공되지 않습니다."}
+            </p>
+            <div className="news-card-actions">
+              <button type="button" className="news-detail-btn">
+                자세히 보기
+              </button>
+              <a
+                href={article.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="news-link-btn"
+                onClick={(event) => event.stopPropagation()}
+              >
+                원문 링크
+              </a>
             </div>
-          </a>
+          </article>
         ))}
       </div>
+
+      {selectedArticle && (
+        <div
+          className="news-modal-backdrop"
+          role="presentation"
+          onClick={() => setSelectedArticle(null)}
+        >
+          <section
+            className="news-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="news-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="news-modal-close"
+              onClick={() => setSelectedArticle(null)}
+              aria-label="뉴스 상세 닫기"
+            >
+              ×
+            </button>
+            <div className="news-source">{selectedArticle.source}</div>
+            <h3 id="news-modal-title">{selectedArticle.title}</h3>
+            <div className="news-date">{formatDateTime(selectedArticle.pubDate)}</div>
+            <p className="news-summary modal-summary">
+              {selectedArticle.summary || "요약 정보가 제공되지 않습니다."}
+            </p>
+            <a
+              href={selectedArticle.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary news-original-btn"
+            >
+              원문 새 탭에서 열기
+            </a>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
