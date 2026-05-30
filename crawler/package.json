@@ -1,0 +1,14 @@
+{
+  "name": "cadana-crawler",
+  "version": "1.0.0",
+  "main": "src/newsCrawler.js",
+  "scripts": {
+    "start": "node src/newsCrawler.js",
+    "cron": "node-cron"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "node-cron": "^3.0.3",
+    "rss-parser": "^3.13.0"
+  }
+}
