@@ -1,6 +1,6 @@
-# Cadana Exchange
+# Cadena Exchange
 
-A blockchain-based virtual cryptocurrency exchange where users trade **CDA (Cadana Token)** with virtual KRW. Wallet authentication via MetaMask, GPS location rewards, and a CDA price engine driven by daily security news counts.
+A blockchain-based virtual cryptocurrency exchange where users trade **CDA (Cadena Token)** with virtual KRW. Wallet authentication via MetaMask, GPS location rewards, and a CDA price engine driven by daily security news counts.
 
 ---
 
@@ -236,7 +236,7 @@ Duplicate prevention is enforced server-side via the `lastLocationClaim` field p
 2. Frontend calls GET /api/auth/nonce/:address
    → Backend creates user if new (with 1,000,000 KRW), returns nonce
 3. Frontend asks MetaMask to sign:
-   "Cadana 로그인 인증\nNonce: {nonce}"
+   "Cadena 로그인 인증\nNonce: {nonce}"
 4. Frontend calls POST /api/auth/verify with { address, signature }
    → Backend recovers signer with ethers.verifyMessage()
    → If match: rotate nonce, issue JWT (24h expiry)
