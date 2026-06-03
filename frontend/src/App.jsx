@@ -34,7 +34,9 @@ function AppContent() {
         ))}
       </nav>
       <main className="main-content">
-        {activeTab === "dashboard" && <Dashboard />}
+        {activeTab === "dashboard" && (
+          <Dashboard onOpenLocation={() => setActiveTab("location")} />
+        )}
         {activeTab === "trade" && <TradePanel />}
         {activeTab === "chart" && <PriceChart />}
         {activeTab === "location" && <LocationVerify />}

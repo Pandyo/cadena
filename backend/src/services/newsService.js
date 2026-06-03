@@ -4,7 +4,6 @@ const iconv = require("iconv-lite");
 const PriceHistory = require("../models/PriceHistory");
 
 const parser = new Parser({ timeout: 10000 });
-const BOANNEWS_SOURCE = "보안뉴스";
 
 // EUC-KR 인코딩 피드를 가져와 UTF-8로 변환 후 파싱
 async function parseEucKrFeed(url) {
@@ -15,42 +14,12 @@ async function parseEucKrFeed(url) {
 }
 
 const RSS_FEEDS = [
+  { url: "https://feeds.feedburner.com/TheHackersNews", encoding: "utf-8" },
+  { url: "https://www.bleepingcomputer.com/feed/", encoding: "utf-8" },
   { url: "http://www.boannews.com/media/news_rss.xml", encoding: "euc-kr" },
 ];
 
-function stripHtml(value = "") {
-  return value
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function isValidDateQuery(date) {
-  return typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date);
-}
-
-function formatKoreanDate(dateValue) {
-  const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) return null;
-
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
-}
-
-async function fetchSecurityNews(date) {
+async function fetchSecurityNews() {
   const results = [];
   for (const { url, encoding } of RSS_FEEDS) {
     try {
@@ -61,19 +30,14 @@ async function fetchSecurityNews(date) {
         title: item.title,
         link: item.link,
         pubDate: item.pubDate || item["dc:date"],
-        source: BOANNEWS_SOURCE,
-        summary: stripHtml(item.contentSnippet || item.content || item.summary || item.description || ""),
+        source: feed.title || "보안뉴스",
       }));
       results.push(...items);
     } catch (err) {
       console.warn(`RSS fetch failed for ${url}:`, err.message);
     }
   }
-
-  const sorted = results.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-  if (!isValidDateQuery(date)) return sorted;
-
-  return sorted.filter((article) => formatKoreanDate(article.pubDate) === date);
+  return results.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 }
 
 async function updatePriceFromNews() {

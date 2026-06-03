@@ -4,7 +4,7 @@ import {
   Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
-  TrendingUp, TrendingDown, Gift, Shield, Award,
+  TrendingUp, TrendingDown, Gift, Shield,
   Newspaper, AlertTriangle, ExternalLink,
   MapPin, User, Wallet, Clock, BarChart2,
 } from "lucide-react";
@@ -127,15 +127,8 @@ const rewardIcon = new L.DivIcon({
 });
 
 /* ──────────────────── 위치 보상 섹션 ──────────────────── */
-function DashboardReward() {
-  const { user, fetchUser } = useWallet();
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState(null);
+function DashboardReward({ onOpenLocation }) {
   const [userPos, setUserPos] = useState(null);
-
-  const canClaim =
-    !user?.lastLocationClaim ||
-    (Date.now() - new Date(user.lastLocationClaim)) / 3600000 >= 24;
 
   /* 페이지 진입 시 현재 위치 조회 (지도 표시용) */
   useEffect(() => {
@@ -145,31 +138,6 @@ function DashboardReward() {
       () => {}
     );
   }, []);
-
-  const handleClaim = () => {
-    if (!navigator.geolocation) return setMsg({ type: "error", text: "GPS 미지원 브라우저" });
-    setLoading(true);
-    setMsg(null);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const position = [pos.coords.latitude, pos.coords.longitude];
-        setUserPos(position);
-        try {
-          const res = await api.post("/location/claim", {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-          });
-          setMsg({ type: "success", text: `+${res.data.reward} CDA 수령 완료!` });
-          fetchUser();
-        } catch (err) {
-          setMsg({ type: "error", text: err.response?.data?.error || "수령 실패" });
-        } finally {
-          setLoading(false);
-        }
-      },
-      (err) => { setMsg({ type: "error", text: err.message }); setLoading(false); }
-    );
-  };
 
   return (
     <div className="db-card">
@@ -220,15 +188,12 @@ function DashboardReward() {
       </div>
 
       <button
-        className={`db-claim-btn${!canClaim || loading ? " disabled" : ""}`}
-        onClick={handleClaim}
-        disabled={!canClaim || loading}
+        className="db-claim-btn"
+        onClick={onOpenLocation}
       >
         <MapPin size={15} />
-        {loading ? "위치 확인 중..." : canClaim ? "GPS 인증하고 CDA 받기" : "24시간 후 재수령 가능"}
+        GPS 인증하고 CDA 받기
       </button>
-
-      {msg && <p className={`db-msg ${msg.type}`}>{msg.text}</p>}
 
       <div className="db-info-box">
         <Shield size={16} color="#EAB308" />
@@ -450,7 +415,7 @@ function DashboardProfile() {
 }
 
 /* ──────────────────── 메인 대시보드 ──────────────────── */
-export default function Dashboard() {
+export default function Dashboard({ onOpenLocation }) {
   const { fetchUser } = useWallet();
   useEffect(() => { fetchUser(); }, [fetchUser]);
 
@@ -459,7 +424,7 @@ export default function Dashboard() {
       <div className="db-col-left">
         <DashboardChart />
         <div className="db-bottom-row">
-          <DashboardReward />
+          <DashboardReward onOpenLocation={onOpenLocation} />
           <DashboardNews />
         </div>
       </div>
