@@ -83,7 +83,12 @@ export default function TradingDashboard() {
         const latest = res && res.length ? res[res.length - 1] : null
         if (!latest || latest.sentimentScore === undefined) return
 
-        const sentiment = latest.sentimentScore > 0 ? '긍정' : latest.sentimentScore < 0 ? '부정' : '중립'
+        const sentiment =
+          latest.sentimentScore > 0
+            ? '긍정'
+            : latest.sentimentScore < 0
+              ? '부정'
+              : '중립'
         const score = Math.abs(latest.sentimentScore)
         let multiplier = 1.0
         if (score >= 10) multiplier = 2.0
@@ -92,7 +97,12 @@ export default function TradingDashboard() {
         if (!mounted) return
         setSentimentPopup({
           text: `보안뉴스 동향 (${sentiment}) ${multiplier.toFixed(1)}배 ${latest.changePercent >= 0 ? '상승' : '하락'}`,
-          type: sentiment === '긍정' ? 'positive' : sentiment === '부정' ? 'negative' : 'neutral',
+          type:
+            sentiment === '긍정'
+              ? 'positive'
+              : sentiment === '부정'
+                ? 'negative'
+                : 'neutral',
         })
         setTimeout(() => setSentimentPopup(null), 5000)
       } catch (e) {
