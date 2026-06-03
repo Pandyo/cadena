@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMarket } from "../contexts/MarketContext";
+import NewsCalendar from "./NewsCalendar";
 
 function getKoreanToday() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -22,16 +23,34 @@ export default function NewsFeed() {
     news,
     newsLoading,
     newsError,
-    currentPrice,
-    priceUpdatedAt,
+    newArticleAlert,
     fetchNews,
+    setNewArticleAlert,
   } = useMarket();
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedArticle, setSelectedArticle] = useState(null);
+  const [toastClosing, setToastClosing] = useState(false);
 
   useEffect(() => {
     fetchNews(selectedDate);
   }, [selectedDate]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!newArticleAlert) return undefined;
+    setToastClosing(false);
+    const closeStart = setTimeout(() => setToastClosing(true), 4700);
+    const closeEnd = setTimeout(() => setNewArticleAlert(null), 5000);
+    return () => {
+      clearTimeout(closeStart);
+      clearTimeout(closeEnd);
+    };
+  }, [newArticleAlert, setNewArticleAlert]);
 
   const handleToday = () => {
     setSelectedDate(getKoreanToday());
@@ -41,23 +60,30 @@ export default function NewsFeed() {
     setSelectedDate("");
   };
 
+  const handleDateSelect = (dateStr) => {
+    setSelectedDate(dateStr);
+  };
+
+  const handleToastClick = () => {
+    setSelectedDate("");
+    setToastClosing(false);
+    setNewArticleAlert(null);
+  };
+
+  const emptyMessage = selectedDate
+    ? selectedDate > getKoreanToday()
+      ? `${selectedDate} 은(는) 아직 도래하지 않은 날짜입니다. 기사가 존재하지 않습니다.`
+      : `${selectedDate} 에 수집된 보안뉴스 기사가 없습니다.`
+    : "보안뉴스 기사가 없습니다.";
+
   return (
     <div className="news-panel">
       <h2>보안 뉴스 피드</h2>
-      <div className="price-mechanism-card">
-        <h3>가격 결정 메커니즘</h3>
-        <p>당일 수집된 보안 뉴스 기사 수에 따라 CDA 가격이 자동 조정됩니다.</p>
-        <ul>
-          <li>기사 5건 초과: 건당 +2% 상승</li>
-          <li>기사 5건 미만: 건당 -1% 하락</li>
-        </ul>
-        <div className="price-now">
-          현재 CDA: <strong>&#8361;{currentPrice.toLocaleString()}</strong>
-          {priceUpdatedAt && (
-            <span className="small"> (최종 업데이트: {new Date(priceUpdatedAt).toLocaleString("ko-KR")})</span>
-          )}
-        </div>
-      </div>
+
+      <NewsCalendar
+        selectedDate={selectedDate}
+        onSelectDate={handleDateSelect}
+      />
 
       <div className="news-toolbar">
         <button type="button" className="today-btn" onClick={handleToday}>
@@ -67,7 +93,7 @@ export default function NewsFeed() {
           type="date"
           className="news-date-picker"
           value={selectedDate}
-          onChange={(event) => setSelectedDate(event.target.value)}
+          onChange={(event) => handleDateSelect(event.target.value)}
           aria-label="조회할 뉴스 날짜"
         />
         <button type="button" className="btn-outline news-reset-btn" onClick={handleShowLatest}>
@@ -79,9 +105,7 @@ export default function NewsFeed() {
         {newsLoading && <p className="empty">보안뉴스를 불러오는 중입니다...</p>}
         {!newsLoading && newsError && <p className="empty error">{newsError}</p>}
         {!newsLoading && !newsError && news.length === 0 && (
-          <p className="empty">
-            {selectedDate ? "선택한 날짜의 보안뉴스 기사가 없습니다." : "보안뉴스 기사가 없습니다."}
-          </p>
+          <p className="empty">{emptyMessage}</p>
         )}
         {news.map((article, i) => (
           <article
@@ -156,6 +180,27 @@ export default function NewsFeed() {
               원문 새 탭에서 열기
             </a>
           </section>
+        </div>
+      )}
+
+      {newArticleAlert && (
+        <div className={`news-toast ${toastClosing ? "closing" : ""}`} onClick={handleToastClick}>
+          <span className="news-toast-icon">🔒</span>
+          <div>
+            <p className="news-toast-title">새 보안 뉴스 {newArticleAlert.count}건</p>
+            <p className="news-toast-body">{newArticleAlert.title}</p>
+          </div>
+          <button
+            type="button"
+            className="news-toast-close"
+            onClick={(event) => {
+              event.stopPropagation();
+              setNewArticleAlert(null);
+            }}
+            aria-label="새 보안 뉴스 알림 닫기"
+          >
+            ×
+          </button>
         </div>
       )}
     </div>
