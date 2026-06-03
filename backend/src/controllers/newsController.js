@@ -1,8 +1,8 @@
-const { fetchSecurityNews, updatePriceFromNews } = require("../services/newsService");
+const { fetchLatest10Articles, updatePriceFromNews } = require("../services/newsService");
 
 exports.getNews = async (req, res) => {
   try {
-    const articles = await fetchSecurityNews();
+    const articles = await fetchLatest10Articles();
     res.json(articles);
   } catch (err) {
     res.status(500).json({ error: err.message });
