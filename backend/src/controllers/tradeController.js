@@ -5,13 +5,13 @@ const { ethers } = require("ethers");
 
 async function getCurrentPrice() {
   const latest = await PriceHistory.findOne().sort({ createdAt: -1 });
-  if (!latest) return Number(process.env.CDA_BASE_PRICE_ETH) || 0.0001;
+  if (!latest) return Number(process.env.CDA_BASE_PRICE_ETH) || 0.000750;
 
-  // DB의 KRW 스케일(1000~10000)을 ETH 스케일(0.00005~0.0005)로 변환
-  let ethPrice = latest.price / 20000000;
-  ethPrice = Math.max(0.00005, Math.min(0.0005, ethPrice));
+  // DB의 KRW 스케일(1000~10000)을 ETH 스케일(0.0005~0.001)로 변환
+  let ethPrice = 0.0005 + ((latest.price - 1000) / 9000) * 0.0005;
+  ethPrice = Math.max(0.0005, Math.min(0.001, ethPrice));
   
-  return Number(ethPrice.toFixed(6));
+  return Number(ethPrice.toFixed(7));
 }
 
 exports.buy = async (req, res) => {

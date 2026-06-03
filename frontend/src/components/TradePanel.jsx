@@ -97,7 +97,7 @@ export default function TradePanel() {
 
         <div className="trade-summary">
           <span>ETH {mode === "buy" ? "필요" : "수령"}</span>
-          <strong>{costEth.toFixed(4)} ETH</strong>
+          <strong>{costEth.toFixed(6)} ETH</strong>
         </div>
 
         <div className="balance-hint">

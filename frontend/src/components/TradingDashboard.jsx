@@ -18,8 +18,12 @@ export default function TradingDashboard() {
   const [amount, setAmount] = useState('')
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState(null)
-  const [displayPrice, setDisplayPrice] = useState(currentPrice)
+  const [displayPrice, setDisplayPrice] = useState(0)
   const [sentimentPopup, setSentimentPopup] = useState(null)
+
+  useEffect(() => {
+    setDisplayPrice(currentPrice)
+  }, [currentPrice])
 
   const chartRef = useRef(null)
   const chartInstance = useRef(null)
@@ -118,17 +122,17 @@ export default function TradingDashboard() {
     }
   }, [fetchHistory])
 
-  // 실시간 가격 변동 (1초마다 ETH 기준 변동, 예: ±0.00002)
+  // 실시간 가격 변동 (1초마다 ETH 기준 변동, 예: ±0.000002)
   useEffect(() => {
     const interval = setInterval(() => {
       setDisplayPrice((prev) => {
-        // ETH 기준 미세 변동 (±0.00002)
-        const change = (Math.random() - 0.5) * 0.00004
+        // ETH 기준 미세 변동 (±0.000002) - 소수점 7자리 기준
+        const change = (Math.random() - 0.5) * 0.000004
         let newPrice = prev + change
-        // 가격 범위: 0.00005 ~ 0.0005 ETH
-        newPrice = Math.max(0.00005, Math.min(0.0005, newPrice))
-        // 소수점 6자리까지
-        newPrice = Number(newPrice.toFixed(6))
+        // 가격 범위: 0.0005 ~ 0.001 ETH
+        newPrice = Math.max(0.0005, Math.min(0.001, newPrice))
+        // 소수점 7자리까지
+        newPrice = Number(newPrice.toFixed(7))
 
         // 차트의 실시간 봉 업데이트
         try {
@@ -208,7 +212,7 @@ export default function TradingDashboard() {
     }
   }
 
-  const costEth = amount ? Number((Number(amount) * displayPrice).toFixed(6)) : 0
+  const costEth = amount ? Number((Number(amount) * displayPrice).toFixed(7)) : 0
   const maxBuy = ethBalance && displayPrice > 0 ? Math.floor(Number(ethBalance) / displayPrice) : 0
   const maxSell = user?.cdaBalance || 0
 
@@ -220,7 +224,7 @@ export default function TradingDashboard() {
           <div>
             <h2>CDA/ETH</h2>
             <span className="price-large">
-              {displayPrice.toFixed(6)} ETH
+              {displayPrice.toFixed(7)} ETH
             </span>
           </div>
           <div className="chart-stats">
@@ -301,7 +305,7 @@ export default function TradingDashboard() {
             </div>
             <div className="summary-row">
               <span>평단가</span>
-              <strong>{displayPrice.toFixed(6)} ETH</strong>
+              <strong>{displayPrice.toFixed(7)} ETH</strong>
             </div>
           </div>
 
@@ -323,7 +327,7 @@ export default function TradingDashboard() {
           <div className="info-row">
             <span className="label">ETH 잔액</span>
             <span className="value">
-              {Number(ethBalance).toFixed(4)} ETH
+              {Number(ethBalance).toFixed(7)} ETH
             </span>
           </div>
 
@@ -342,7 +346,7 @@ export default function TradingDashboard() {
               {(
                 Number(ethBalance) +
                   (user?.cdaBalance || 0) * currentPrice
-              ).toFixed(4)} ETH
+              ).toFixed(7)} ETH
             </span>
           </div>
         </div>
