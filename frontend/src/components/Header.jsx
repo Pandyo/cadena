@@ -9,7 +9,7 @@ export default function Header() {
     <header className="header">
       <div className="header-brand">
         <span className="logo">&#8383;</span>
-        <h1>Cadana Exchange</h1>
+        <h1>Cadena Exchange</h1>
       </div>
       <div className="header-info">
         <span className="price-badge">CDA &#8361;{currentPrice.toLocaleString()}</span>

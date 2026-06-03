@@ -28,4 +28,4 @@ cron.schedule("0 15 * * *", async () => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Cadana backend running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Cadena backend running on port ${PORT}`));
