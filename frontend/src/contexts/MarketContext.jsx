@@ -10,12 +10,26 @@ export function MarketProvider({ children }) {
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsError, setNewsError] = useState("");
   const [priceUpdatedAt, setPriceUpdatedAt] = useState(null);
+  const [priceStats, setPriceStats] = useState({
+    changePercent: 0,
+    changeAmount: 0,
+    sentimentScore: 0,
+    newsCount: 0,
+    previousPrice: 1000,
+  });
 
   const fetchPrice = async () => {
     try {
       const res = await api.get("/price/current");
       setCurrentPrice(res.data.price);
       setPriceUpdatedAt(res.data.updatedAt);
+      setPriceStats({
+        changePercent: res.data.changePercent || 0,
+        changeAmount: res.data.changeAmount || 0,
+        sentimentScore: res.data.sentimentScore || 0,
+        newsCount: res.data.newsCount || 0,
+        previousPrice: res.data.previousPrice || res.data.price,
+      });
     } catch {}
   };
 
@@ -23,6 +37,7 @@ export function MarketProvider({ children }) {
     try {
       const res = await api.get("/price/history?limit=30");
       setPriceHistory(res.data);
+      return res.data;
     } catch {}
   };
 
@@ -44,7 +59,7 @@ export function MarketProvider({ children }) {
     fetchPrice();
     fetchHistory();
     fetchNews();
-    const interval = setInterval(fetchPrice, 30000);
+    const interval = setInterval(fetchPrice, 30000); // 30초마다 업데이트
     return () => clearInterval(interval);
   }, []);
 
@@ -57,6 +72,7 @@ export function MarketProvider({ children }) {
         newsLoading,
         newsError,
         priceUpdatedAt,
+        priceStats,
         fetchPrice,
         fetchHistory,
         fetchNews,
