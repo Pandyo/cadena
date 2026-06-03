@@ -34,7 +34,7 @@ exports.verifySignature = async (req, res) => {
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const message = `Cadana 로그인 인증\nNonce: ${user.nonce}`;
+    const message = `Cadena 로그인 인증\nNonce: ${user.nonce}`;
     const recovered = ethers.verifyMessage(message, signature).toLowerCase();
 
     if (recovered !== lower) return res.status(401).json({ error: "Signature mismatch" });

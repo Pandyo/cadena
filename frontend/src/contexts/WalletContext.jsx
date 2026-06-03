@@ -33,7 +33,7 @@ export function WalletProvider({ children }) {
       const { nonce } = nonceRes.data;
 
       const signer = await provider.getSigner();
-      const message = `Cadana 로그인 인증\nNonce: ${nonce}`;
+      const message = `Cadena 로그인 인증\nNonce: ${nonce}`;
       const signature = await signer.signMessage(message);
 
       const verifyRes = await api.post("/auth/verify", { address, signature });

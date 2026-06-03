@@ -7,7 +7,7 @@ export default function ConnectWallet() {
     <div className="connect-screen">
       <div className="connect-card">
         <div className="connect-logo">&#8383;</div>
-        <h1>Cadana Exchange</h1>
+        <h1>Cadena Exchange</h1>
         <p>블록체인 기반 가상 암호화폐 거래소</p>
         <ul className="feature-list">
           <li>가입 즉시 <strong>100만 KRW</strong> 지급</li>
