@@ -15,13 +15,14 @@ function getKoreanToday() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-const convertToEth = (price) => {
-  const ethPrice = 0.0005 + ((price - 1000) / 9000) * 0.0005;
-  return Number(Math.max(0.0005, Math.min(0.001, ethPrice)).toFixed(7));
+const normalizeEthPrice = (price) => {
+  const numericPrice = Number(price);
+  if (!Number.isFinite(numericPrice) || numericPrice <= 0) return 0.0005;
+  return Number(Math.max(0.0005, Math.min(0.001, numericPrice)).toFixed(7));
 };
 
 export function MarketProvider({ children }) {
-  const [currentPrice, setCurrentPrice] = useState(0.000750);
+  const [currentPrice, setCurrentPrice] = useState(0.0005);
   const [priceHistory, setPriceHistory] = useState([]);
   const [news, setNews] = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -33,7 +34,7 @@ export function MarketProvider({ children }) {
     changeAmount: 0,
     sentimentScore: 0,
     newsCount: 0,
-    previousPrice: 0.000750,
+    previousPrice: 0.0005,
   });
 
   const [monthlyCount, setMonthlyCount] = useState({});
@@ -45,8 +46,8 @@ export function MarketProvider({ children }) {
     try {
       const res = await api.get("/price/current");
 
-      const ethPrice = convertToEth(res.data.price);
-      const ethPrev = convertToEth(res.data.previousPrice || res.data.price);
+      const ethPrice = normalizeEthPrice(res.data.price);
+      const ethPrev = normalizeEthPrice(res.data.previousPrice || res.data.price);
 
       setCurrentPrice(ethPrice);
       setPriceUpdatedAt(res.data.updatedAt);
@@ -67,8 +68,8 @@ export function MarketProvider({ children }) {
     try {
       const res = await api.get("/price/history?limit=30");
       const converted = res.data.map((p) => {
-        const ethPrice = convertToEth(p.price);
-        const ethPrev = convertToEth(p.previousPrice || p.price);
+        const ethPrice = normalizeEthPrice(p.price);
+        const ethPrev = normalizeEthPrice(p.previousPrice || p.price);
         return {
           ...p,
           price: ethPrice,
@@ -123,10 +124,14 @@ export function MarketProvider({ children }) {
   };
 
   useEffect(() => {
-    fetchPrice();
-    fetchHistory();
+    const refreshPriceData = () => {
+      fetchPrice();
+      fetchHistory();
+    };
 
-    const interval = setInterval(fetchPrice, 30000);
+    refreshPriceData();
+
+    const interval = setInterval(refreshPriceData, 30000);
 
     return () => clearInterval(interval);
   }, []);

@@ -4,6 +4,7 @@ const cors = require('cors')
 const mongoose = require('mongoose')
 const cron = require('node-cron')
 const { updatePriceFromNews } = require('./src/services/newsService')
+const { seedInitialPrice } = require('./src/services/priceService')
 
 const app = express()
 
@@ -12,7 +13,10 @@ app.use(express.json())
 
 mongoose
   .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/cadana')
-  .then(() => console.log('MongoDB connected'))
+  .then(async () => {
+    console.log('MongoDB connected')
+    await seedInitialPrice()
+  })
   .catch((err) => console.error('MongoDB error:', err))
 
 app.use('/api/auth', require('./src/routes/auth'))

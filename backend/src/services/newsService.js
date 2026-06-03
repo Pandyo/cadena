@@ -3,6 +3,13 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const iconv = require("iconv-lite");
 const PriceHistory = require("../models/PriceHistory");
+const {
+  MIN_ETH_PRICE,
+  MAX_ETH_PRICE,
+  DEFAULT_ETH_PRICE,
+  normalizeToEthPrice,
+  roundEthPrice,
+} = require("../utils/priceScale");
 
 // rss-parser: dc:date, content:encoded 등 확장 필드 명시적으로 수집
 const parser = new Parser({
@@ -348,12 +355,8 @@ function calculateSentimentMultiplier(sentimentScore) {
 
   if (absScore === 0) return 1.0;
 
-  if (absScore >= 10) {
-    return sentimentScore > 0 ? 2.0 : 0.5;
-  }
-
-  const multiplier = 1 + absScore * 0.1;
-  return sentimentScore > 0 ? multiplier : 1 / multiplier;
+  const impactMultiplier = 1 + Math.min(absScore, 10) * 0.1;
+  return sentimentScore > 0 ? impactMultiplier : 1 / impactMultiplier;
 }
 
 // 오늘 기사 수를 가격 배수로 변환
@@ -460,13 +463,34 @@ async function fetchSecurityNews(date) {
   return results;
 }
 
-// 최근 10개 기사만 필요할 때 사용하는 호환 함수
+// 최신 기사만 필요할 때 사용하는 호환 함수
 async function fetchLatest10Articles() {
   const articles = await fetchSecurityNews();
-  const latest = articles.slice(0, 10);
+  const latest = articles.slice(0, 1);
 
   console.log(`✓ 보안뉴스: 최근 ${latest.length}개 기사 수집`);
   return latest;
+}
+
+function selectRotatingTodayArticle(todayArticles, latestPriceRecord, fallbackArticles) {
+  if (todayArticles.length === 0) {
+    return fallbackArticles.slice(0, 1);
+  }
+
+  const orderedTodayArticles = [...todayArticles].sort((a, b) => {
+    const aTime = a.pubDate ? a.pubDate.getTime() : 0;
+    const bTime = b.pubDate ? b.pubDate.getTime() : 0;
+    return aTime - bTime;
+  });
+
+  const lastAnalyzedLink = latestPriceRecord?.articles?.[0]?.link;
+  const lastAnalyzedIndex = orderedTodayArticles.findIndex(
+    (article) => article.link === lastAnalyzedLink
+  );
+  const nextIndex =
+    lastAnalyzedIndex >= 0 ? (lastAnalyzedIndex + 1) % orderedTodayArticles.length : 0;
+
+  return [orderedTodayArticles[nextIndex]];
 }
 
 // ============================================
@@ -479,13 +503,19 @@ async function fetchLatest10Articles() {
 async function updatePriceFromNews() {
   const articles = await fetchSecurityNews();
 
-  const latestArticles = articles.slice(0, 10);
   const todayKst = getKoreanDateString(new Date());
 
   const todayArticles = articles.filter((article) => {
     if (!article.pubDate) return false;
     return getKoreanDateString(article.pubDate) === todayKst;
   });
+
+  const latestPriceRecord = await PriceHistory.findOne().sort({ createdAt: -1 });
+  const latestArticles = selectRotatingTodayArticle(
+    todayArticles,
+    latestPriceRecord,
+    articles
+  );
 
   const articlesWithSentiment = latestArticles.map((article) => {
     const { score, keywords, sentiment } = calculateArticleSentiment(article.title);
@@ -508,7 +538,7 @@ async function updatePriceFromNews() {
         articlesWithSentiment.length
       : 0;
 
-  console.log("\n📰 최근 10개 기사 감성 분석:");
+  console.log("\n📰 최신 1개 기사 감성 분석:");
 
   articlesWithSentiment.forEach((article, idx) => {
     const keywordStr = article.keywords
@@ -526,21 +556,20 @@ async function updatePriceFromNews() {
   console.log(`   평균 감성 점수: ${avgSentimentScore.toFixed(2)}`);
   console.log(`   오늘 기사 수: ${todayArticles.length}`);
 
-  const latestPriceRecord = await PriceHistory.findOne().sort({ createdAt: -1 });
-
-  const currentPrice =
-    latestPriceRecord?.price || Number(process.env.CDA_BASE_PRICE) || 1000;
+  const currentPrice = latestPriceRecord
+    ? normalizeToEthPrice(latestPriceRecord.price)
+    : DEFAULT_ETH_PRICE;
 
   const sentimentMultiplier = calculateSentimentMultiplier(avgSentimentScore);
-  const newsCountMultiplier = calculateNewsCountMultiplier(todayArticles.length);
-  const totalMultiplier = sentimentMultiplier * newsCountMultiplier;
+  const newsCountMultiplier = 1;
+  const totalMultiplier = sentimentMultiplier;
 
-  let newPrice = Math.round(currentPrice * totalMultiplier);
+  let newPrice = roundEthPrice(currentPrice * totalMultiplier);
 
   // 가격 범위 제한
-  newPrice = Math.max(1000, Math.min(10000, newPrice));
+  newPrice = roundEthPrice(Math.max(MIN_ETH_PRICE, Math.min(MAX_ETH_PRICE, newPrice)));
 
-  const changeAmount = newPrice - currentPrice;
+  const changeAmount = roundEthPrice(newPrice - currentPrice);
 
   const changePercent =
     currentPrice > 0 ? parseFloat(((changeAmount / currentPrice) * 100).toFixed(2)) : 0;

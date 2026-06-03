@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { WalletProvider, useWallet } from './contexts/WalletContext'
 import { MarketProvider } from './contexts/MarketContext'
 import Header from './components/Header'
@@ -10,7 +10,16 @@ import NewsFeed from './components/NewsFeed'
 
 function AppContent() {
   const { user } = useWallet()
-  const [activeTab, setActiveTab] = useState('dashboard')
+  const [activeTab, setActiveTab] = useState(() => {
+    const savedTab = localStorage.getItem('cadena-active-tab')
+    return ['dashboard', 'trade', 'location', 'news'].includes(savedTab)
+      ? savedTab
+      : 'dashboard'
+  })
+
+  useEffect(() => {
+    localStorage.setItem('cadena-active-tab', activeTab)
+  }, [activeTab])
 
   if (!user) return <ConnectWallet />
 
