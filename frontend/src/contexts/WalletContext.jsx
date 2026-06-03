@@ -7,12 +7,29 @@ const WalletContext = createContext(null);
 export function WalletProvider({ children }) {
   const [account, setAccount] = useState(null);
   const [user, setUser] = useState(null);
+  const [ethBalance, setEthBalance] = useState("0");
   const [loading, setLoading] = useState(false);
+
+  const fetchEthBalance = useCallback(async (address) => {
+    if (window.ethereum && address) {
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const balance = await provider.getBalance(address);
+        setEthBalance(ethers.formatEther(balance));
+      } catch (err) {
+        console.error("Failed to fetch ETH balance", err);
+      }
+    }
+  }, []);
 
   const fetchUser = useCallback(async () => {
     try {
       const res = await api.get("/auth/me");
       setUser(res.data);
+      if (res.data.walletAddress) {
+        fetchEthBalance(res.data.walletAddress);
+        setAccount(res.data.walletAddress);
+      }
     } catch {
       setUser(null);
     }
@@ -40,6 +57,7 @@ export function WalletProvider({ children }) {
       localStorage.setItem("cadana_token", verifyRes.data.token);
       setAccount(address);
       setUser(verifyRes.data.user);
+      fetchEthBalance(address);
     } catch (err) {
       console.error("Login error:", err);
       alert("로그인 실패: " + (err.message || "알 수 없는 오류"));
@@ -52,6 +70,7 @@ export function WalletProvider({ children }) {
     localStorage.removeItem("cadana_token");
     setAccount(null);
     setUser(null);
+    setEthBalance("0");
   }, []);
 
   useEffect(() => {
@@ -66,7 +85,7 @@ export function WalletProvider({ children }) {
   }, [fetchUser, disconnect]);
 
   return (
-    <WalletContext.Provider value={{ account, user, loading, connect, disconnect, fetchUser }}>
+    <WalletContext.Provider value={{ account, user, ethBalance, loading, connect, disconnect, fetchUser, fetchEthBalance }}>
       {children}
     </WalletContext.Provider>
   );

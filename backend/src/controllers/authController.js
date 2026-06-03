@@ -15,8 +15,7 @@ exports.getNonce = async (req, res) => {
       await Transaction.create({
         walletAddress: address,
         type: "initial",
-        krwAmount: 1000000,
-        note: "초기 가입 자금",
+        note: "초기 가입",
       });
     }
 
@@ -48,7 +47,7 @@ exports.verifySignature = async (req, res) => {
       { expiresIn: "24h" }
     );
 
-    res.json({ token, user: { walletAddress: lower, krwBalance: user.krwBalance, cdaBalance: user.cdaBalance } });
+    res.json({ token, user: { walletAddress: lower, cdaBalance: user.cdaBalance } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -60,7 +59,6 @@ exports.getMe = async (req, res) => {
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json({
       walletAddress: user.walletAddress,
-      krwBalance: user.krwBalance,
       cdaBalance: user.cdaBalance,
       lastLocationClaim: user.lastLocationClaim,
       locationClaimCount: user.locationClaimCount,
