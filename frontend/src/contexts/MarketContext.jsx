@@ -7,6 +7,8 @@ export function MarketProvider({ children }) {
   const [currentPrice, setCurrentPrice] = useState(1000);
   const [priceHistory, setPriceHistory] = useState([]);
   const [news, setNews] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsError, setNewsError] = useState("");
   const [priceUpdatedAt, setPriceUpdatedAt] = useState(null);
 
   const fetchPrice = async () => {
@@ -24,11 +26,18 @@ export function MarketProvider({ children }) {
     } catch {}
   };
 
-  const fetchNews = async () => {
+  const fetchNews = async (date) => {
+    setNewsLoading(true);
+    setNewsError("");
     try {
-      const res = await api.get("/news");
+      const res = await api.get(date ? `/news?date=${encodeURIComponent(date)}` : "/news");
       setNews(res.data.slice(0, 10));
-    } catch {}
+    } catch {
+      setNews([]);
+      setNewsError("보안뉴스를 불러오지 못했습니다.");
+    } finally {
+      setNewsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -40,7 +49,19 @@ export function MarketProvider({ children }) {
   }, []);
 
   return (
-    <MarketContext.Provider value={{ currentPrice, priceHistory, news, priceUpdatedAt, fetchPrice, fetchHistory }}>
+    <MarketContext.Provider
+      value={{
+        currentPrice,
+        priceHistory,
+        news,
+        newsLoading,
+        newsError,
+        priceUpdatedAt,
+        fetchPrice,
+        fetchHistory,
+        fetchNews,
+      }}
+    >
       {children}
     </MarketContext.Provider>
   );

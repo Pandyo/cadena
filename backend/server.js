@@ -28,4 +28,17 @@ cron.schedule("0 15 * * *", async () => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Cadena backend running on port ${PORT}`));
+const server = app.listen(PORT, () => console.log(`Cadana backend running on port ${PORT}`));
+
+server.on("error", (error) => {
+  if (error.code === "EADDRINUSE") {
+    console.error(`\n[PORT ERROR] Port ${PORT} is already in use.`);
+    console.error("이미 해당 포트를 사용하는 프로세스가 있습니다.");
+    console.error(`확인 명령어: netstat -ano | findstr :${PORT}`);
+    console.error("종료 명령어: taskkill /PID PID번호 /F\n");
+    process.exit(1);
+  }
+
+  console.error("[SERVER ERROR]", error);
+  process.exit(1);
+});
