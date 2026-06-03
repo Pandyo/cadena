@@ -8,7 +8,6 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
     },
-    krwBalance: { type: Number, default: 1000000 },
     cdaBalance: { type: Number, default: 0 },
     lastLocationClaim: { type: Date, default: null },
     locationClaimCount: { type: Number, default: 0 },

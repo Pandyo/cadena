@@ -3,9 +3,10 @@ import { useWallet } from '../contexts/WalletContext'
 import { useMarket } from '../contexts/MarketContext'
 import { createChart } from 'lightweight-charts'
 import api from '../api/client'
+import { ethers } from 'ethers'
 
 export default function TradingDashboard() {
-  const { user, fetchUser } = useWallet()
+  const { user, ethBalance, fetchUser, fetchEthBalance, account } = useWallet()
   const {
     currentPrice,
     priceHistory,
@@ -117,14 +118,17 @@ export default function TradingDashboard() {
     }
   }, [fetchHistory])
 
-  // 실시간 가격 변동 (1초마다 1000~10000 범위에서 ±200원)
+  // 실시간 가격 변동 (1초마다 ETH 기준 변동, 예: ±0.00002)
   useEffect(() => {
     const interval = setInterval(() => {
       setDisplayPrice((prev) => {
-        const change = (Math.random() - 0.5) * 400 // ±200
+        // ETH 기준 미세 변동 (±0.00002)
+        const change = (Math.random() - 0.5) * 0.00004
         let newPrice = prev + change
-        newPrice = Math.max(1000, Math.min(10000, newPrice))
-        newPrice = Math.round(newPrice)
+        // 가격 범위: 0.00005 ~ 0.0005 ETH
+        newPrice = Math.max(0.00005, Math.min(0.0005, newPrice))
+        // 소수점 6자리까지
+        newPrice = Number(newPrice.toFixed(6))
 
         // 차트의 실시간 봉 업데이트
         try {
@@ -172,7 +176,21 @@ export default function TradingDashboard() {
     try {
       const cdaAmount = Number(amount)
       if (mode === 'buy') {
-        await api.post('/trade/buy', { cdaAmount })
+        if (!window.ethereum) throw new Error("MetaMask가 필요합니다.")
+        
+        const treasuryAddress = import.meta.env.VITE_TREASURY_ADDRESS
+        if (!treasuryAddress) throw new Error("서버 지갑 주소가 설정되지 않았습니다.")
+
+        const provider = new ethers.BrowserProvider(window.ethereum)
+        const signer = await provider.getSigner()
+
+        const tx = await signer.sendTransaction({
+          to: treasuryAddress,
+          value: ethers.parseEther(costEth.toString()),
+        })
+
+        // 백엔드에 거래 전송 기록 알림
+        await api.post("/trade/buy", { cdaAmount, txHash: tx.hash })
         setMsg({ type: 'success', text: `${cdaAmount} CDA 매수 완료!` })
       } else {
         await api.post('/trade/sell', { cdaAmount })
@@ -180,16 +198,18 @@ export default function TradingDashboard() {
       }
       setAmount('')
       fetchUser()
+      fetchEthBalance(account)
       fetchHistory()
     } catch (err) {
-      setMsg({ type: 'error', text: err.response?.data?.error || '거래 실패' })
+      console.error("Trade error:", err)
+      setMsg({ type: 'error', text: err.response?.data?.error || err.message || '거래 실패' })
     } finally {
       setLoading(false)
     }
   }
 
-  const cost = amount ? Math.round(Number(amount) * displayPrice) : 0
-  const maxBuy = user ? Math.floor(user.krwBalance / displayPrice) : 0
+  const costEth = amount ? Number((Number(amount) * displayPrice).toFixed(6)) : 0
+  const maxBuy = ethBalance && displayPrice > 0 ? Math.floor(Number(ethBalance) / displayPrice) : 0
   const maxSell = user?.cdaBalance || 0
 
   return (
@@ -198,9 +218,9 @@ export default function TradingDashboard() {
       <div className="chart-section-full">
         <div className="chart-header-top">
           <div>
-            <h2>CDA/KRW</h2>
+            <h2>CDA/ETH</h2>
             <span className="price-large">
-              ₩{displayPrice.toLocaleString()}
+              {displayPrice.toFixed(6)} ETH
             </span>
           </div>
           <div className="chart-stats">
@@ -277,11 +297,11 @@ export default function TradingDashboard() {
           <div className="trade-summary">
             <div className="summary-row">
               <span>예상 {mode === 'buy' ? '구매가' : '수취액'}</span>
-              <strong>₩{cost.toLocaleString()}</strong>
+              <strong>{costEth} ETH</strong>
             </div>
             <div className="summary-row">
               <span>평단가</span>
-              <strong>₩{displayPrice.toLocaleString()}</strong>
+              <strong>{displayPrice.toFixed(6)} ETH</strong>
             </div>
           </div>
 
@@ -301,9 +321,9 @@ export default function TradingDashboard() {
           <h3>내 자산</h3>
 
           <div className="info-row">
-            <span className="label">KRW 잔액</span>
+            <span className="label">ETH 잔액</span>
             <span className="value">
-              ₩{Math.round(user?.krwBalance || 0).toLocaleString()}
+              {Number(ethBalance).toFixed(4)} ETH
             </span>
           </div>
 
@@ -317,13 +337,12 @@ export default function TradingDashboard() {
           <div className="divider"></div>
 
           <div className="info-row total">
-            <span className="label">총 자산</span>
+            <span className="label">총 자산 (ETH 환산)</span>
             <span className="value">
-              ₩
-              {Math.round(
-                (user?.krwBalance || 0) +
-                  (user?.cdaBalance || 0) * currentPrice,
-              ).toLocaleString()}
+              {(
+                Number(ethBalance) +
+                  (user?.cdaBalance || 0) * currentPrice
+              ).toFixed(4)} ETH
             </span>
           </div>
         </div>

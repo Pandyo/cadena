@@ -32,9 +32,9 @@ function DashboardChart() {
     <div className="db-card">
       <div className="db-chart-header">
         <div>
-          <p className="db-label">CADENA / KRW</p>
+          <p className="db-label">CADENA / ETH</p>
           <div className="db-price-row">
-            <span className="db-price-big">₩{currentPrice.toLocaleString()}</span>
+            <span className="db-price-big">{currentPrice.toFixed(6)} ETH</span>
             <span className={`db-badge-pct ${isUp ? "up" : "down"}`}>
               {isUp ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
               {isUp ? "+" : ""}{pct}%
@@ -61,13 +61,13 @@ function DashboardChart() {
             <YAxis
               stroke="#94a3b8"
               tick={{ fontSize: 11 }}
-              tickFormatter={(v) => `₩${v.toLocaleString()}`}
+              tickFormatter={(v) => `${Number(v).toFixed(4)} ETH`}
               width={85}
             />
             <Tooltip
               contentStyle={{ backgroundColor: "#1a1a2e", border: "1px solid #2a2a4a", borderRadius: 8 }}
               labelStyle={{ color: "#94a3b8" }}
-              formatter={(v) => [`₩${v.toLocaleString()}`, "CDA"]}
+              formatter={(v) => [`${Number(v).toFixed(6)} ETH`, "CDA"]}
             />
             <Area type="monotone" dataKey="price" stroke="#EAB308" strokeWidth={2} fill="url(#cdaGrad)" />
           </AreaChart>
@@ -78,19 +78,19 @@ function DashboardChart() {
         <div className="db-chart-stats">
           <div>
             <p className="db-label">최고가</p>
-            <p className="db-stat-val up">₩{Math.max(...priceHistory.map((p) => p.price)).toLocaleString()}</p>
+            <p className="db-stat-val up">{Math.max(...priceHistory.map((p) => p.price)).toFixed(6)} ETH</p>
           </div>
           <div>
             <p className="db-label">최저가</p>
-            <p className="db-stat-val down">₩{Math.min(...priceHistory.map((p) => p.price)).toLocaleString()}</p>
+            <p className="db-stat-val down">{Math.min(...priceHistory.map((p) => p.price)).toFixed(6)} ETH</p>
           </div>
           <div>
             <p className="db-label">시작가</p>
-            <p className="db-stat-val">₩{priceHistory[0]?.price.toLocaleString()}</p>
+            <p className="db-stat-val">{priceHistory[0]?.price.toFixed(6)} ETH</p>
           </div>
           <div>
             <p className="db-label">현재가</p>
-            <p className="db-stat-val yellow">₩{currentPrice.toLocaleString()}</p>
+            <p className="db-stat-val yellow">{currentPrice.toFixed(6)} ETH</p>
           </div>
         </div>
       )}
@@ -239,7 +239,7 @@ function DashboardNews() {
         <div className="db-news-meta-chip yellow-chip">
           <TrendingUp size={13} color="#EAB308" />
           <p className="db-label">현재가</p>
-          <p className="yellow">{currentPrice.toLocaleString()} CDA/₩</p>
+          <p className="yellow">{currentPrice.toFixed(6)} ETH</p>
         </div>
       </div>
 
@@ -273,7 +273,7 @@ function DashboardNews() {
 
 /* ──────────────────── 프로필 섹션 ──────────────────── */
 function DashboardProfile() {
-  const { user, account } = useWallet();
+  const { user, account, ethBalance } = useWallet();
   const { currentPrice } = useMarket();
   const [history, setHistory] = useState([]);
 
@@ -282,8 +282,8 @@ function DashboardProfile() {
   }, []);
 
   const cdaBalance = user?.cdaBalance || 0;
-  const krwAsCda = currentPrice > 0 ? (user?.krwBalance || 0) / currentPrice : 0;
-  const totalCda = cdaBalance + krwAsCda;
+  const ethAsCda = currentPrice > 0 ? Number(ethBalance) / currentPrice : 0;
+  const totalCda = cdaBalance + ethAsCda;
   const totalReward = (user?.locationClaimCount || 0) * 100;
   const grade = totalReward >= 1000 ? "Gold" : totalReward >= 300 ? "Silver" : null;
   const gradeColor = grade === "Gold" ? "#EAB308" : "#94a3b8";
@@ -328,8 +328,8 @@ function DashboardProfile() {
         <div className="db-asset-row">
           <div className="db-asset-chip">
             <Wallet size={13} color="#60a5fa" />
-            <span className="db-label">KRW → CDA</span>
-            <span className="blue">{krwAsCda.toFixed(2)} CDA</span>
+            <span className="db-label">ETH → CDA</span>
+            <span className="blue">{ethAsCda.toFixed(2)} CDA</span>
           </div>
           <div className="db-asset-chip">
             <span className="db-label" style={{ fontSize: "0.75rem" }}>₿</span>
@@ -344,7 +344,7 @@ function DashboardProfile() {
           />
         </div>
         <div className="db-portfolio-bar-labels">
-          <span className="db-label">KRW 환산 비중</span>
+          <span className="db-label">ETH 환산 비중</span>
           <span className="db-label">CDA 비중 {totalCda > 0 ? ((cdaBalance / totalCda) * 100).toFixed(1) : 0}%</span>
         </div>
       </div>
@@ -404,7 +404,7 @@ function DashboardProfile() {
             <span>{tx.cdaAmount > 0 ? `${tx.cdaAmount} CDA` : "-"}</span>
             <span className="db-label">
               {tx.price > 0 && tx.cdaAmount > 0
-                ? `${(tx.krwAmount / tx.price).toFixed(2)} CDA`
+                ? `${(tx.ethAmount || 0).toFixed(6)} ETH`
                 : "-"}
             </span>
           </div>
