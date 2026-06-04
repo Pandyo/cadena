@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react'
 import { WalletProvider, useWallet } from './contexts/WalletContext'
 import { MarketProvider } from './contexts/MarketContext'
 import Header from './components/Header'
-import ConnectWallet from './components/ConnectWallet'
+import LandingPage from './components/LandingPage'
 import Dashboard from './components/Dashboard'
 import TradingDashboard from './components/TradingDashboard'
 import LocationVerify from './components/LocationVerify'
 import NewsFeed from './components/NewsFeed'
 
 function AppContent() {
-  const { user } = useWallet()
+  const { user, connect, loading } = useWallet()
+  const [enteredExchange, setEnteredExchange] = useState(false)
   const [activeTab, setActiveTab] = useState(() => {
     const savedTab = localStorage.getItem('cadena-active-tab')
     return ['dashboard', 'trade', 'location', 'news'].includes(savedTab)
@@ -21,7 +22,21 @@ function AppContent() {
     localStorage.setItem('cadena-active-tab', activeTab)
   }, [activeTab])
 
-  if (!user) return <ConnectWallet />
+  const handleLandingStart = async () => {
+    if (user) {
+      setEnteredExchange(true)
+      return
+    }
+
+    await connect()
+    if (localStorage.getItem('cadana_token')) {
+      setEnteredExchange(true)
+    }
+  }
+
+  if (!enteredExchange) {
+    return <LandingPage onStart={handleLandingStart} loading={loading} />
+  }
 
   return (
     <div className="app-layout">
