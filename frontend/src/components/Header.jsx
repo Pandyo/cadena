@@ -12,7 +12,7 @@ export default function Header() {
         <h1>Cadena Exchange</h1>
       </div>
       <div className="header-info">
-        <span className="price-badge">CDA &#8361;{currentPrice.toLocaleString()}</span>
+        <span className="price-badge">CDA {currentPrice.toFixed(7)} ETH</span>
         <span className="address-badge">
           {account?.slice(0, 6)}...{account?.slice(-4)}
         </span>

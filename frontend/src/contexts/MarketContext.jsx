@@ -15,8 +15,14 @@ function getKoreanToday() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+const normalizeEthPrice = (price) => {
+  const numericPrice = Number(price);
+  if (!Number.isFinite(numericPrice) || numericPrice <= 0) return 0.0005;
+  return Number(Math.max(0.0005, Math.min(0.001, numericPrice)).toFixed(7));
+};
+
 export function MarketProvider({ children }) {
-  const [currentPrice, setCurrentPrice] = useState(1000);
+  const [currentPrice, setCurrentPrice] = useState(0.0005);
   const [priceHistory, setPriceHistory] = useState([]);
   const [news, setNews] = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -28,7 +34,7 @@ export function MarketProvider({ children }) {
     changeAmount: 0,
     sentimentScore: 0,
     newsCount: 0,
-    previousPrice: 1000,
+    previousPrice: 0.0005,
   });
 
   const [monthlyCount, setMonthlyCount] = useState({});
@@ -40,15 +46,18 @@ export function MarketProvider({ children }) {
     try {
       const res = await api.get("/price/current");
 
-      setCurrentPrice(res.data.price);
+      const ethPrice = normalizeEthPrice(res.data.price);
+      const ethPrev = normalizeEthPrice(res.data.previousPrice || res.data.price);
+
+      setCurrentPrice(ethPrice);
       setPriceUpdatedAt(res.data.updatedAt);
 
       setPriceStats({
         changePercent: res.data.changePercent || 0,
-        changeAmount: res.data.changeAmount || 0,
+        changeAmount: Number((ethPrice - ethPrev).toFixed(7)),
         sentimentScore: res.data.sentimentScore || 0,
         newsCount: res.data.newsCount || 0,
-        previousPrice: res.data.previousPrice || res.data.price,
+        previousPrice: ethPrev,
       });
     } catch {
       // 필요하면 에러 상태 추가 가능
@@ -58,8 +67,18 @@ export function MarketProvider({ children }) {
   const fetchHistory = async () => {
     try {
       const res = await api.get("/price/history?limit=30");
-      setPriceHistory(res.data);
-      return res.data;
+      const converted = res.data.map((p) => {
+        const ethPrice = normalizeEthPrice(p.price);
+        const ethPrev = normalizeEthPrice(p.previousPrice || p.price);
+        return {
+          ...p,
+          price: ethPrice,
+          previousPrice: ethPrev,
+          changeAmount: Number((ethPrice - ethPrev).toFixed(7)),
+        };
+      });
+      setPriceHistory(converted);
+      return converted;
     } catch {
       return [];
     }
@@ -105,10 +124,14 @@ export function MarketProvider({ children }) {
   };
 
   useEffect(() => {
-    fetchPrice();
-    fetchHistory();
+    const refreshPriceData = () => {
+      fetchPrice();
+      fetchHistory();
+    };
 
-    const interval = setInterval(fetchPrice, 30000);
+    refreshPriceData();
+
+    const interval = setInterval(refreshPriceData, 30000);
 
     return () => clearInterval(interval);
   }, []);
